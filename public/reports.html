@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports - ICT Experts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="logo-icon">ICT</div><div><div class="logo-text">ICT Experts</div><div class="logo-sub">Admin Panel</div></div></div>
+      <nav class="sidebar-nav">
+        <div class="nav-section"><div class="nav-section-title">Overview</div>
+          <a href="/admin-dashboard.html" class="nav-link"><i class="bi bi-grid"></i> Dashboard</a>
+          <a href="/students.html" class="nav-link"><i class="bi bi-people"></i> Students</a>
+          <a href="/papers.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> Papers</a>
+          <a href="/reports.html" class="nav-link active"><i class="bi bi-bar-chart-line"></i> Reports</a>
+        </div>
+        <div class="nav-section"><div class="nav-section-title">Account</div><a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></div>
+      </nav>
+      <div class="sidebar-footer"><div class="user-chip"><div class="user-avatar" id="userAvatar">AD</div><div><div class="user-name" id="userName">Admin</div><div class="user-role" id="userRole">Administrator</div></div></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left"><button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button><h1 class="page-title">Class Performance Reports</h1></div>
+        <div class="topbar-actions"><button class="btn btn-primary" id="exportCsvBtn"><i class="bi bi-download"></i> Export CSV</button></div>
+      </header>
+      <div class="content-area">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div class="card"><div class="card-header"><div class="card-title">Class Average per Paper</div></div><div class="card-body"><div class="chart-wrap"><canvas id="classAvgChart"></canvas></div></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">Performance Distribution</div></div><div class="card-body"><div class="chart-wrap"><canvas id="distributionChart"></canvas></div><div style="font-size:12px;color:var(--text-tertiary);margin-top:12px;">Distribution based on all recorded results. 0-39: Fail, 40-59: Pass, 60-74: Good, 75-100: Excellent</div></div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div class="card"><div class="card-header"><div class="card-title">Improving Students (+10%+)</div></div><div class="card-body" id="improvingList"><div class="loading"><div class="spinner"></div></div></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">Declining Students (-10%+)</div></div><div class="card-body" id="decliningList"><div class="loading"><div class="spinner"></div></div></div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:24px;">
+          <div class="card-header"><div class="card-title">Paper Performance (Lowest Average First)</div><div style="font-size:12px;color:var(--text-tertiary)">Identifies papers where class needs more support</div></div>
+          <div class="table-wrap" style="border:none;"><table class="table"><thead><tr><th>Paper</th><th>Type</th><th>Attempts</th><th>Class Avg</th><th>Date</th></tr></thead><tbody id="paperStatsBody"><tr><td colspan="5" class="empty"><div class="spinner"></div></td></tr></tbody></table></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Student Ranking by Average %</div></div>
+          <div class="table-wrap" style="border:none;"><table class="table"><thead><tr><th>Rank</th><th>Student</th><th>Papers</th><th>Average</th><th>Last Active</th></tr></thead><tbody id="rankingBody"><tr><td colspan="5" class="empty"><div class="spinner"></div></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;"></div>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/reports.js"></script>
+</body>
+</html>

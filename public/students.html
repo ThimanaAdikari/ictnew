@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students - ICT Experts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="logo-icon">ICT</div><div><div class="logo-text">ICT Experts</div><div class="logo-sub">Admin Panel</div></div></div>
+      <nav class="sidebar-nav">
+        <div class="nav-section"><div class="nav-section-title">Overview</div>
+          <a href="/admin-dashboard.html" class="nav-link"><i class="bi bi-grid"></i> Dashboard</a>
+          <a href="/students.html" class="nav-link active"><i class="bi bi-people"></i> Students</a>
+          <a href="/papers.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> Papers</a>
+          <a href="/reports.html" class="nav-link"><i class="bi bi-bar-chart-line"></i> Reports</a>
+        </div>
+        <div class="nav-section"><div class="nav-section-title">Account</div><a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></div>
+      </nav>
+      <div class="sidebar-footer"><div class="user-chip"><div class="user-avatar" id="userAvatar">AD</div><div><div class="user-name" id="userName">Loading...</div><div class="user-role" id="userRole">Admin</div></div></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left"><button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button><h1 class="page-title">Students Management</h1></div>
+        <div class="topbar-actions"><button class="btn btn-primary" onclick="openStudentModal()"><i class="bi bi-person-plus"></i> Add Student</button></div>
+      </header>
+      <div class="content-area">
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:240px;position:relative;"><i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);"></i><input type="text" id="searchStudents" class="form-input" placeholder="Search by name, code, email..." style="padding-left:36px;" /></div>
+            <select id="filterPerformance" class="form-select" style="width:180px;"><option value="">All Performance</option><option value="high">High (75%+)</option><option value="medium">Medium (50-74%)</option><option value="low">Low (<50%)</option></select>
+            <button class="btn btn-secondary" onclick="loadStudents()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Student</th><th>Code</th><th>Email</th><th>Papers</th><th>Avg %</th><th>Last Active</th><th>Actions</th></tr></thead><tbody id="studentsBody"><tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr></tbody></table></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Student Modal -->
+  <div class="modal-overlay" id="studentModal">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title" id="studentModalTitle">Add New Student</div><button class="btn btn-sm btn-ghost" onclick="closeModal('studentModal')"><i class="bi bi-x-lg"></i></button></div>
+      <div class="modal-body">
+        <form id="studentForm">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="studentName" class="form-input" placeholder="e.g., Nimal Perera" required /></div>
+            <div class="form-group"><label class="form-label">Student Code *</label><input type="text" id="studentCode" class="form-input" placeholder="e.g., ICT2024001" required /></div>
+          </div>
+          <div class="form-group"><label class="form-label">Email Address *</label><input type="email" id="studentEmail" class="form-input" placeholder="student@example.com" required /></div>
+          <div class="form-group"><label class="form-label">Password *</label><input type="password" id="studentPassword" class="form-input" placeholder="Min 6 characters" required /><div class="form-hint">Student will use this to login. They can change it later.</div></div>
+          <div id="studentFormError" class="alert alert-error hidden"></div>
+        </form>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('studentModal')">Cancel</button><button class="btn btn-primary" id="saveStudentBtn" onclick="handleStudentSubmit()">Create Student</button></div>
+    </div>
+  </div>
+
+  <div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;"></div>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    let allStudents = [];
+    let editingStudentId = null;
+    document.addEventListener('DOMContentLoaded', async () => {
+      const auth = await protectPage('admin');
+      if (!auth) return;
+      document.getElementById('userName').textContent = auth.profile.full_name;
+      document.getElementById('userAvatar').textContent = auth.profile.full_name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+      loadStudents();
+      document.getElementById('searchStudents').addEventListener('input', (e) => filterStudents());
+      document.getElementById('filterPerformance').addEventListener('change', filterStudents);
+      document.getElementById('menuToggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
+    });
+    async function loadStudents() {
+      const tbody = document.getElementById('studentsBody');
+      tbody.innerHTML = '<tr><td colspan="7" class="empty"><div class="spinner"></div></td></tr>';
+      try {
+        allStudents = await apiFetch('/api/students');
+        renderStudents(allStudents);
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Error: ${err.message}</td></tr>`; }
+    }
+    function renderStudents(students) {
+      const tbody = document.getElementById('studentsBody');
+      if (students.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No students found</td></tr>'; return; }
+      tbody.innerHTML = students.map(s => {
+        const badge = s.avg_percentage === null ? 'gray' : s.avg_percentage >= 75 ? 'green' : s.avg_percentage >= 50 ? 'blue' : s.avg_percentage >= 40 ? 'amber' : 'red';
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;background:var(--bg-tertiary);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;">${s.full_name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div><div><div style="font-weight:600">${s.full_name}</div><div style="font-size:12px;color:var(--text-tertiary)">ID: ${s.id.substring(0,8)}</div></div></div></td>
+          <td><span class="badge badge-blue">${s.student_code}</span></td>
+          <td style="font-size:13px;">${s.email}</td>
+          <td>${s.total_papers}</td>
+          <td><span class="badge badge-${badge}">${s.avg_percentage !== null ? formatPercentage(s.avg_percentage) : 'No data'}</span></td>
+          <td style="font-size:12px;">${s.last_activity ? formatDate(s.last_activity) : '-'}</td>
+          <td><div class="flex gap-2"><button class="btn btn-sm btn-secondary" onclick="viewStudent('${s.id}')"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-ghost" style="color:var(--accent-red)" onclick="deleteStudent('${s.id}','${s.full_name}')"><i class="bi bi-trash"></i></button></div></td>
+        </tr>`;
+      }).join('');
+    }
+    function filterStudents() {
+      const search = document.getElementById('searchStudents').value.toLowerCase();
+      const perf = document.getElementById('filterPerformance').value;
+      let filtered = allStudents.filter(s => !search || s.full_name.toLowerCase().includes(search) || s.student_code.toLowerCase().includes(search) || s.email.toLowerCase().includes(search));
+      if (perf === 'high') filtered = filtered.filter(s => s.avg_percentage >= 75);
+      else if (perf === 'medium') filtered = filtered.filter(s => s.avg_percentage >= 50 && s.avg_percentage < 75);
+      else if (perf === 'low') filtered = filtered.filter(s => s.avg_percentage !== null && s.avg_percentage < 50);
+      renderStudents(filtered);
+    }
+    function openStudentModal() { editingStudentId = null; document.getElementById('studentModalTitle').textContent = 'Add New Student'; document.getElementById('studentForm').reset(); document.getElementById('studentPassword').parentElement.style.display = 'block'; document.getElementById('saveStudentBtn').textContent = 'Create Student'; document.getElementById('studentFormError').classList.add('hidden'); document.getElementById('studentModal').classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    window.closeModal = closeModal; window.openStudentModal = openStudentModal;
+    async function handleStudentSubmit() {
+      const btn = document.getElementById('saveStudentBtn');
+      const errorEl = document.getElementById('studentFormError');
+      const data = { full_name: document.getElementById('studentName').value.trim(), student_code: document.getElementById('studentCode').value.trim(), email: document.getElementById('studentEmail').value.trim(), password: document.getElementById('studentPassword').value };
+      if (!data.full_name || !data.student_code || !data.email || !data.password) { errorEl.textContent = 'All fields required'; errorEl.classList.remove('hidden'); return; }
+      if (data.password.length < 6) { errorEl.textContent = 'Password must be at least 6 characters'; errorEl.classList.remove('hidden'); return; }
+      btn.disabled = true; btn.textContent = 'Creating...'; errorEl.classList.add('hidden');
+      try { await apiFetch('/api/students', { method: 'POST', body: JSON.stringify(data) }); showToast('Student created successfully', 'success'); closeModal('studentModal'); loadStudents(); } catch (err) { errorEl.textContent = err.message; errorEl.classList.remove('hidden'); } finally { btn.disabled = false; btn.textContent = 'Create Student'; }
+    }
+    window.handleStudentSubmit = handleStudentSubmit;
+    function viewStudent(id) { window.location.href = `/student-profile.html?id=${id}`; }
+    window.viewStudent = viewStudent;
+    async function deleteStudent(id, name) { if (!confirm(`Delete student ${name}? This will remove all their results. Cannot be undone.`)) return; try { await apiFetch(`/api/students/${id}`, { method: 'DELETE' }); showToast('Student deleted', 'success'); loadStudents(); } catch (err) { showToast(err.message, 'error'); } }
+    window.deleteStudent = deleteStudent;
+  </script>
+</body>
+</html>

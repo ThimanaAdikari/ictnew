@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard - ICT Experts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="logo-icon">ICT</div><div><div class="logo-text">ICT Experts</div><div class="logo-sub">Student Portal</div></div></div>
+      <nav class="sidebar-nav">
+        <div class="nav-section"><div class="nav-section-title">Learning</div>
+          <a href="/student-dashboard.html" class="nav-link active"><i class="bi bi-grid"></i> Dashboard</a>
+          <a href="#" class="nav-link" onclick="openMarksModal()"><i class="bi bi-plus-circle"></i> Enter Marks</a>
+        </div>
+        <div class="nav-section"><div class="nav-section-title">Account</div>
+          <a href="#" class="nav-link" onclick="document.getElementById('passwordModal').classList.add('open')"><i class="bi bi-key"></i> Change Password</a>
+          <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer"><div class="user-chip"><div class="user-avatar" id="userAvatar">ST</div><div><div class="user-name" id="userName">Loading...</div><div class="user-role" id="userRole">Student</div></div></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left"><button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button><h1 class="page-title">Welcome, <span id="welcomeName">Student</span>!</h1></div>
+        <div class="topbar-actions"><button class="btn btn-primary" onclick="openMarksModal()"><i class="bi bi-plus-lg"></i> Add Result</button></div>
+      </header>
+      <div class="content-area">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Papers Completed</div><div class="stat-value" id="totalPapers">—</div><div class="stat-change neutral">Total attempts</div></div>
+          <div class="stat-card"><div class="stat-label">Average %</div><div class="stat-value" id="avgPercentage">—</div><div class="stat-change neutral">Overall performance</div></div>
+          <div class="stat-card"><div class="stat-label">Best Result</div><div class="stat-value" id="bestPercentage">—</div><div class="stat-change positive"><i class="bi bi-trophy"></i> Highest score</div></div>
+          <div class="stat-card"><div class="stat-label">Latest Result</div><div class="stat-value" id="latestPercentage">—</div><div class="stat-change" id="improvement">—</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:24px;margin-bottom:24px;">
+          <div class="card"><div class="card-header"><div class="card-title">Progress Over Time</div></div><div class="card-body"><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">Performance by Paper</div></div><div class="card-body"><div class="chart-wrap"><canvas id="barChart"></canvas></div></div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Recent Results</div></div>
+            <div class="table-wrap" style="border:none;"><table class="table"><thead><tr><th>Paper</th><th>Type</th><th>Marks</th><th>%</th><th>Date</th></tr></thead><tbody id="recentResultsBody"><tr><td colspan="5" class="empty"><div class="spinner"></div></td></tr></tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Available Papers</div><button class="btn btn-sm btn-ghost" onclick="openMarksModal()">Add Marks</button></div>
+            <div class="card-body" id="availablePapersList"><div class="loading"><div class="spinner"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Enter Marks Modal -->
+  <div class="modal-overlay" id="marksModal">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Enter Examination Result</div><button class="btn btn-sm btn-ghost" onclick="document.getElementById('marksModal').classList.remove('open')"><i class="bi bi-x-lg"></i></button></div>
+      <div class="modal-body">
+        <form id="enterMarksForm">
+          <div class="form-group"><label class="form-label">Select Paper *</label><select id="paperSelect" class="form-select" required><option value="">Loading papers...</option></select><div id="maxMarksDisplay" style="font-size:12px;color:var(--text-tertiary);margin-top:6px;"></div></div>
+          <div class="form-group"><label class="form-label">Marks Obtained *</label><input type="number" id="marksObtained" class="form-input" placeholder="e.g., 75" min="0" required /><div class="form-hint">Enter numeric marks between 0 and max marks</div></div>
+        </form>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById('marksModal').classList.remove('open')">Cancel</button><button class="btn btn-primary" id="submitMarksBtn" onclick="document.getElementById('enterMarksForm').requestSubmit()">Submit Marks</button></div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Change Password</div><button class="btn btn-sm btn-ghost" onclick="document.getElementById('passwordModal').classList.remove('open')"><i class="bi bi-x-lg"></i></button></div>
+      <div class="modal-body">
+        <form id="passwordForm" onsubmit="handlePasswordChange(event)">
+          <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPassword" class="form-input" minlength="6" required /></div>
+          <div class="form-group"><label class="form-label">Confirm Password</label><input type="password" id="confirmPassword" class="form-input" minlength="6" required /></div>
+          <div id="passwordError" class="alert alert-error hidden"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Update Password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;"></div>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/student.js"></script>
+  <script>
+    async function handlePasswordChange(e) {
+      e.preventDefault();
+      const newPass = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      const errEl = document.getElementById('passwordError');
+      if (newPass !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.classList.remove('hidden'); return; }
+      if (newPass.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.classList.remove('hidden'); return; }
+      errEl.classList.add('hidden');
+      try {
+        const supabase = getSupabase();
+        const { error } = await supabase.auth.updateUser({ password: newPass });
+        if (error) throw error;
+        showToast('Password updated successfully', 'success');
+        document.getElementById('passwordModal').classList.remove('open');
+        document.getElementById('passwordForm').reset();
+      } catch (err) { errEl.textContent = err.message; errEl.classList.remove('hidden'); }
+    }
+  </script>
+</body>
+</html>

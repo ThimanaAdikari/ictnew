@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - ICT Experts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">ICT</div>
+        <div><div class="logo-text">ICT Experts</div><div class="logo-sub">Admin Panel</div></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section-title">Overview</div>
+          <a href="/admin-dashboard.html" class="nav-link active"><i class="bi bi-grid"></i> Dashboard</a>
+          <a href="/students.html" class="nav-link"><i class="bi bi-people"></i> Students</a>
+          <a href="/papers.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> Examination Papers</a>
+          <a href="/reports.html" class="nav-link"><i class="bi bi-bar-chart-line"></i> Reports</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">Account</div>
+          <a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <div class="user-avatar" id="userAvatar">AD</div>
+          <div><div class="user-name" id="userName">Loading...</div><div class="user-role" id="userRole">Administrator</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
+          <h1 class="page-title">Admin Dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-blue">Secure Admin Access</span>
+          <button class="btn btn-sm btn-secondary" onclick="window.location.href='/papers.html'"><i class="bi bi-plus"></i> New Paper</button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Students</div>
+            <div class="stat-value" id="totalStudents">—</div>
+            <div class="stat-change neutral">Registered accounts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Examination Papers</div>
+            <div class="stat-value" id="totalPapers">—</div>
+            <div class="stat-change neutral">Active papers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Results</div>
+            <div class="stat-value" id="totalResults">—</div>
+            <div class="stat-change positive"><i class="bi bi-graph-up"></i> Records stored</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Class Performance</div>
+            <div class="stat-value" id="avgPerformance">—</div>
+            <div class="stat-change neutral">Based on all results</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Need Improvement</div>
+            <div class="stat-value" id="needImprovement">—</div>
+            <div class="stat-change negative"><i class="bi bi-exclamation-triangle"></i> Below 50%</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Recent Examination Results</div>
+              <a href="/reports.html" class="btn btn-sm btn-ghost">View All</a>
+            </div>
+            <div class="table-wrap" style="border:none;border-radius:0;">
+              <table class="table">
+                <thead><tr><th>Student</th><th>Paper</th><th>Marks</th><th>Result</th><th>Date</th></tr></thead>
+                <tbody id="recentResultsBody"><tr><td colspan="5" class="empty"><div class="spinner"></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Performers</div></div>
+            <div class="card-body" id="topStudentsList"><div class="loading"><div class="spinner"></div></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Quick Actions</div></div>
+          <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+            <a href="/students.html" style="text-decoration:none;"><div style="padding:20px;border:1px solid var(--border-primary);border-radius:var(--radius-md);transition:all 0.2s;"><div style="width:40px;height:40px;background:var(--accent-blue-light);color:var(--accent-blue);border-radius:10px;display:grid;place-items:center;margin-bottom:12px;"><i class="bi bi-person-plus"></i></div><div style="font-weight:600;color:var(--text-primary);">Add Student</div><div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Create new student account</div></div></a>
+            <a href="/papers.html" style="text-decoration:none;"><div style="padding:20px;border:1px solid var(--border-primary);border-radius:var(--radius-md);"><div style="width:40px;height:40px;background:var(--accent-green-light);color:var(--accent-green);border-radius:10px;display:grid;place-items:center;margin-bottom:12px;"><i class="bi bi-file-earmark-plus"></i></div><div style="font-weight:600;color:var(--text-primary);">Create Paper</div><div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Add new examination</div></div></a>
+            <a href="/reports.html" style="text-decoration:none;"><div style="padding:20px;border:1px solid var(--border-primary);border-radius:var(--radius-md);"><div style="width:40px;height:40px;background:var(--accent-amber-light);color:var(--accent-amber);border-radius:10px;display:grid;place-items:center;margin-bottom:12px;"><i class="bi bi-download"></i></div><div style="font-weight:600;color:var(--text-primary);">Export Reports</div><div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Download CSV summaries</div></div></a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;"></div>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

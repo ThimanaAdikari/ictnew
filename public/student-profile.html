@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Profile - ICT Experts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="logo-icon">ICT</div><div><div class="logo-text">ICT Experts</div><div class="logo-sub">Admin Panel</div></div></div>
+      <nav class="sidebar-nav">
+        <div class="nav-section"><div class="nav-section-title">Overview</div>
+          <a href="/admin-dashboard.html" class="nav-link"><i class="bi bi-grid"></i> Dashboard</a>
+          <a href="/students.html" class="nav-link active"><i class="bi bi-people"></i> Students</a>
+          <a href="/papers.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> Papers</a>
+          <a href="/reports.html" class="nav-link"><i class="bi bi-bar-chart-line"></i> Reports</a>
+        </div>
+        <div class="nav-section"><div class="nav-section-title">Account</div><a href="#" class="nav-link" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></div>
+      </nav>
+      <div class="sidebar-footer"><div class="user-chip"><div class="user-avatar" id="userAvatar">AD</div><div><div class="user-name" id="userName">Admin</div><div class="user-role" id="userRole">Administrator</div></div></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left"><button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button><button class="btn btn-sm btn-ghost" onclick="window.location.href='/students.html'"><i class="bi bi-arrow-left"></i> Back to Students</button><h1 class="page-title" id="profileTitle">Student Profile</h1></div>
+        <div class="topbar-actions"><span class="badge badge-blue" id="profileCode">—</span></div>
+      </header>
+      <div class="content-area" id="profileContent">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </main>
+  </div>
+  <div id="toastContainer" style="position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px;"></div>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/charts.js"></script>
+  <script>
+    let studentId = null;
+    let studentData = null;
+    document.addEventListener('DOMContentLoaded', async () => {
+      const auth = await protectPage('admin');
+      if (!auth) return;
+      document.getElementById('userName').textContent = auth.profile.full_name;
+      document.getElementById('userAvatar').textContent = auth.profile.full_name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+      const params = new URLSearchParams(window.location.search);
+      studentId = params.get('id');
+      if (!studentId) { document.getElementById('profileContent').innerHTML = '<div class="alert alert-error">No student ID provided</div>'; return; }
+      loadProfile();
+      document.getElementById('menuToggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
+    });
+    async function loadProfile() {
+      const container = document.getElementById('profileContent');
+      try {
+        studentData = await apiFetch(`/api/students/${studentId}`);
+        const s = studentData.student;
+        const summary = studentData.summary;
+        document.getElementById('profileTitle').textContent = s.full_name;
+        document.getElementById('profileCode').textContent = s.student_code;
+        container.innerHTML = `
+          <div class="card" style="margin-bottom:24px;">
+            <div class="card-body" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+              <div style="width:72px;height:72px;background:var(--accent-blue);color:white;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;">${s.full_name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
+              <div style="flex:1;min-width:240px;">
+                <h2>${s.full_name}</h2>
+                <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;"><span class="badge badge-blue">${s.student_code}</span><span style="font-size:13px;color:var(--text-secondary)">${s.email}</span><span style="font-size:13px;color:var(--text-tertiary)">Joined ${formatDate(s.created_at)}</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+                <div><div style="font-size:24px;font-weight:800;">${summary.total_papers}</div><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-tertiary)">Papers</div></div>
+                <div><div style="font-size:24px;font-weight:800;color:var(--accent-blue)">${formatPercentage(summary.avg_percentage)}</div><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-tertiary)">Average</div></div>
+                <div><div style="font-size:24px;font-weight:800;color:var(--accent-green)">${formatPercentage(summary.best_percentage)}</div><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-tertiary)">Best</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:24px;margin-bottom:24px;">
+            <div class="card"><div class="card-header"><div class="card-title">Progress Over Time</div></div><div class="card-body"><div class="chart-wrap"><canvas id="progressChart"></canvas></div></div></div>
+            <div class="card"><div class="card-header"><div class="card-title">Performance Comparison</div></div><div class="card-body"><div class="chart-wrap"><canvas id="barChart"></canvas></div></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+            <div class="card">
+              <div class="card-header"><div class="card-title">All Results</div><div style="font-size:12px;color:var(--text-tertiary)">${summary.total_papers} records • First ${formatPercentage(summary.first_percentage)} → Latest ${formatPercentage(summary.latest_percentage)} • ${summary.improvement >=0 ? '+' : ''}${formatPercentage(summary.improvement)} improvement</div></div>
+              <div class="table-wrap" style="border:none;"><table class="table"><thead><tr><th>Paper</th><th>Type</th><th>Marks</th><th>%</th><th>Attempt</th><th>Date</th><th>Actions</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+            </div>
+            <div>
+              <div class="card" style="margin-bottom:16px;"><div class="card-header"><div class="card-title">Missing Papers</div></div><div class="card-body" id="missingPapers"></div></div>
+              <div class="card"><div class="card-header"><div class="card-title">Summary</div></div><div class="card-body" style="font-size:14px;line-height:2;">
+                <div style="display:flex;justify-content:space-between;"><span>Average</span><strong>${formatPercentage(summary.avg_percentage)}</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span>Highest</span><strong style="color:var(--accent-green)">${formatPercentage(summary.best_percentage)}</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span>Lowest</span><strong style="color:var(--accent-red)">${formatPercentage(summary.worst_percentage)}</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span>Improvement</span><strong style="color:${summary.improvement >=0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${summary.improvement >=0 ? '+' : ''}${formatPercentage(summary.improvement)}</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span>Total Papers</span><strong>${summary.total_papers}</strong></div>
+              </div></div>
+            </div>
+          </div>
+        `;
+        createProgressLineChart('progressChart', studentData.results);
+        createPerformanceBarChart('barChart', studentData.results);
+        renderResultsTable(studentData.results);
+        renderMissingPapers(studentData.missingPapers);
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">Failed to load profile: ${err.message}</div>`;
+      }
+    }
+    function renderResultsTable(results) {
+      const tbody = document.getElementById('resultsBody');
+      if (!results || results.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No results yet</td></tr>'; return; }
+      tbody.innerHTML = results.map(r => {
+        const pct = Math.round((r.marks_obtained / r.papers.max_marks)*100);
+        const badge = pct >= 75 ? 'green' : pct >= 60 ? 'blue' : pct >= 40 ? 'amber' : 'red';
+        return `<tr><td style="font-weight:600">${r.papers.paper_name}</td><td><span class="badge badge-blue">${r.papers.paper_type}</span></td><td>${r.marks_obtained} / ${r.papers.max_marks}</td><td><span class="badge badge-${badge}">${pct}%</span></td><td>Attempt ${r.attempt_number}</td><td>${formatDate(r.entered_at)}</td><td><button class="btn btn-sm btn-ghost" style="color:var(--accent-red)" onclick="deleteResult('${r.id}')"><i class="bi bi-trash"></i></button></td></tr>`;
+      }).join('');
+    }
+    function renderMissingPapers(missing) {
+      const el = document.getElementById('missingPapers');
+      if (!missing || missing.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All caught up</div><div class="empty-desc">Student completed all papers</div></div>'; return; }
+      el.innerHTML = missing.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border-primary);border-radius:var(--radius-md);margin-bottom:8px;"><div><div style="font-weight:600;font-size:13px;">${p.paper_name}</div><div style="font-size:11px;color:var(--text-tertiary)">${p.max_marks} marks • ${formatDate(p.exam_date)}</div></div><span class="badge badge-gray">${p.paper_type}</span></div>`).join('');
+    }
+    async function deleteResult(id) {
+      if (!confirm('Delete this result?')) return;
+      try { await apiFetch(`/api/results/${id}`, { method: 'DELETE' }); showToast('Result deleted', 'success'); loadProfile(); } catch (err) { showToast(err.message, 'error'); }
+    }
+    window.deleteResult = deleteResult;
+  </script>
+</body>
+</html>
